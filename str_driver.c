@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-#include "str.h"
+#include "str_struct.h"
 
 int main(int argc, char *argv[]) {
     Str *testStr1 = Str_new();
