@@ -24,6 +24,11 @@ Str *myStr = Str_newWithFormat("the speed is %2.3f km/h", 24.56789);
 
 printf("the string is %s, with %d characters, including null terminator.\n", myStr->str, myStr->length);
 
+5. Free it after use. 
+
+Str_dispose(myStr);
+
+
 
 Included here is str_driver.c where it will test all the convenience functions. 
 
