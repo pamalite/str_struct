@@ -7,6 +7,8 @@
 #include <ctype.h>
 #include <regex.h>
 
+#define STR_BUFSIZE 80
+
 static int compileRegex(regex_t *_regex, const char *_pattern) {
     if (0 != regcomp(_regex, _pattern, REG_EXTENDED|REG_NEWLINE)) {
         return -1;
@@ -60,25 +62,38 @@ static int matchRegex(regex_t *_regex, Str *self, bool _isReturnMatches, regmatc
     return count;
 }
 
-static void set(Str *self, const char *_str) {
-    int size = strlen(_str);
+static void vset(Str *self, const char *_format, va_list _args) {
+	// initialize local buffer with default size
+	char *buffer = (char *) calloc(STR_BUFSIZE, sizeof(char));
 
-    free(self->str);
-    self->str = NULL;
-    self->str = (char *) calloc(size+1, sizeof(char));
+	// backup the args
+	va_list backupArgs;
 
-    strncpy(self->str, _str, size);
-    self->length = size+1;
+	va_copy(backupArgs, _args);
+
+	// enlarge buffer if required
+	int need = vsnprintf(buffer, STR_BUFSIZE, _format, _args);
+	if ((need+1) > STR_BUFSIZE) {
+		// enlarge
+		buffer = (char *) calloc((need+1), sizeof(char));
+		need = vsnprintf(buffer, (need+1), _format, backupArgs);
+	}
+
+	// initialize self->str and self->length
+	self->str = (char *) calloc((need+1), sizeof(char));
+	strncpy(self->str, buffer, (need+1));
+
+	self->length = need;
+
+	// clean up
+	free(buffer);
 }
 
-static void setWithFormat(Str *self, const char *_format, ...) {
-    char buffer[256];
+static void set(Str *self, const char *_format, ...) {
     va_list args;
     va_start(args, _format);
-    vsprintf(buffer, _format, args);
+    vset(self, _format, args);
     va_end(args);
-
-    set(self, buffer);
 }
 
 static void toUpper(Str *self) {
@@ -112,7 +127,7 @@ static bool isEquals(Str *self, Str *_other) {
         return false;
     }
 
-    if (strcmp(self->str, _other->str) == 0) {
+    if (strncmp(self->str, _other->str, self->length) == 0) {
         return true;
     }
 
@@ -128,14 +143,12 @@ static bool isEqualsIgnoreCase(Str *self, Str *_other) {
         return false;
     }
 
-    int i;
-    for (i=0; i < self->length; i++) {
-        if (toupper(self->str[i]) != toupper(_other->str[i])) {
-            return false;
-        }
-    }
+    Str *tempSelf = self;
+    tempSelf->toUpper(tempSelf);
+    Str *tempOther = _other;
+    tempOther->toUpper(tempOther);
 
-    return true;
+    return isEquals(tempSelf, tempOther);
 }
 
 static void leftTrim(Str *self) {
@@ -154,23 +167,18 @@ static void leftTrim(Str *self) {
     }
 
     if (start == 0) {
-        free(self->str);
-        self->str = NULL;
-        self->str = (char *) calloc(1, sizeof(char));
-        self->str[0] = '\0';
-        self->length = 1;
         return;
     }
 
-    int size = self->length - start - 1;
-    char *temp = (char *) calloc(size, sizeof(char));
+    int size = self->length - start;
+    char *temp = (char *) calloc((size+1), sizeof(char));
     for (i=start; i < self->length; i++) {
         temp[i-start] = self->str[i];
     }
 
     free(self->str);
     self->str = NULL;
-    self->str = (char *) calloc(size, sizeof(char));
+    self->str = (char *) calloc((size+1), sizeof(char));
     strncpy(self->str, temp, size);
     self->length = size;
     free(temp);
@@ -192,16 +200,11 @@ static void rightTrim(Str *self) {
     }
 
     if (end == 0) {
-        free(self->str);
-        self->str = NULL;
-        self->str = (char *) calloc(1, sizeof(char));
-        self->str[0] = '\0';
-        self->length = 1;
         return;
     }
 
     int size = end + 1;
-    char *temp = (char *) calloc(size, sizeof(char));
+    char *temp = (char *) calloc((size+1), sizeof(char));
     for (i=0; i <= end; i++) {
         temp[i] = self->str[i];
     }
@@ -209,7 +212,7 @@ static void rightTrim(Str *self) {
 
     free(self->str);
     self->str = NULL;
-    self->str = (char *) calloc(size, sizeof(char));
+    self->str = (char *) calloc((size+1), sizeof(char));
     strncpy(self->str, temp, size);
     self->length = size;
     free(temp);
@@ -243,19 +246,21 @@ static Str *sub(Str *self, int _beginIndex, int _length) {
     }
     temp[i] = '\0';
 
-    Str *out = Str_newWith(temp);
+    Str *out = Str_newWith("%s", temp);
     free(temp);
     return out;
 }
 
 static void append(Str *self, Str *_other) {
-    if (_other == NULL || _other->length <= 1) {
+    if (_other == NULL || _other->length < 1) {
         return;
     }
 
-    int size = self->length + _other->length - 1;
+    int size = self->length + _other->length + 1;
     self->str = (char *) realloc(self->str, size + sizeof(char));
-    strcat(self->str, _other->str);
+    strncat(self->str, _other->str, size);
+    self->length = size - 1;
+
 }
 
 static bool has(Str *self, const char *_pattern) {
@@ -303,17 +308,12 @@ static void replace(Str *self, const char *_pattern, const char *_replacement) {
 	// TODO: Need to implement this ASAP.
 }
 
-static void Str_init(Str *self, const char *_charString) {
-    if (_charString == NULL || strlen(_charString) <= 0) {
-        self->str = (char *) calloc(1, sizeof(char));
-        self->str[0] = '\0';
-        self->length = 1;
-    } else {
-        set(self, _charString);
-    }
+static void Str_init(Str *self) {
+    self->str = (char *) calloc(1, sizeof(char));
+	self->str[0] = '\0';
+	self->length = 1;
 
     self->set = set;
-    self->setWithFormat = setWithFormat;
     self->toUpper = toUpper;
     self->toLower = toLower;
     self->isEquals = isEquals;
@@ -330,29 +330,31 @@ static void Str_init(Str *self, const char *_charString) {
 
 Str *Str_new() {
     Str *str = (Str *) calloc(1, sizeof(Str));
-    Str_init(str, "");
+    Str_init(str);
     return str;
 }
 
-Str *Str_newWith(const char *_charString) {
-    Str *str = (Str *) calloc(1, sizeof(Str));
-    Str_init(str, _charString);
-    return str;
-}
+Str *Str_newWith(const char *_format, ...) {
+	// initialize the string object
+	Str *str = (Str *) calloc(1, sizeof(Str));
+	Str_init(str);
 
-Str *Str_newWithFormat(const char *_format, ...) {
-    char buffer[256];
-    va_list args;
-    va_start(args, _format);
-    vsprintf(buffer, _format, args);
+	// set the object with entered format and string
+	va_list args;
+	va_start(args, _format);
+    vset(str, _format, args);
     va_end(args);
 
-    return Str_newWith(buffer);
+    return str;
 }
 
 void Str_dispose(Str *_str) {
     if (_str == NULL) {
         return;
+    }
+
+    if (_str->str == NULL) {
+    	return;
     }
 
     free(_str->str);
