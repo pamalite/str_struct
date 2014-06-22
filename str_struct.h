@@ -7,8 +7,7 @@ typedef struct STR_S {
 	char *str;
 	int length;
 
-    void (*set) (struct STR_S *, const char *);
-    void (*setWithFormat) (struct STR_S *, const char *, ...);
+    void (*set) (struct STR_S *, const char *, ...);
     void (*toUpper) (struct STR_S *);
     void (*toLower) (struct STR_S *);
     bool (*isEquals) (struct STR_S *, struct STR_S *);
@@ -24,8 +23,7 @@ typedef struct STR_S {
 } Str;
 
 Str *Str_new();
-Str *Str_newWith(const char *);
-Str *Str_newWithFormat(const char *, ...);
+Str *Str_newWith(const char *, ...);
 void Str_dispose(Str *);
 
 
