@@ -18,7 +18,7 @@ Str *myStr = Str_newWith("hello world");
 
 or 
 
-Str *myStr = Str_newWithFormat("the speed is %2.3f km/h", 24.56789);
+Str *myStr = Str_newWith("the speed is %2.3f km/h", 24.56789);
 
 4. Print it with printf
 
