@@ -10,7 +10,11 @@ To Use
 2. Include `str_struct.h` into your code. 
 3. Use it with 
 
-`Str *myStr = Str_new();`
+```C
+Str *myStr = Str_new();
+myStr->set("my new string");
+myStr->set("%d %s", 626, "i like this string better");
+```
 
 or
 
