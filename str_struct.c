@@ -305,7 +305,28 @@ static int find(Str *self, const char *_pattern, int **_indices) {
 }
 
 static void replace(Str *self, const char *_pattern, const char *_replacement) {
-	// TODO: Need to implement this ASAP.
+    // TODO: Need to implement this ASAP.
+}
+
+static int split(Str *self, char ***_output, const char *_delimiters) {
+	int size = 1;
+	char *ptr = strtok(self->str, _delimiters);
+	while (ptr != NULL) {
+		char *temp = (char *) calloc(strlen(ptr)+1, sizeof(char));
+		strncpy(temp, ptr, strlen(ptr));
+
+		*_output = (char **) realloc(*_output, size * sizeof(char*));
+		(*_output)[size-1] = temp;
+    	size++;
+
+		ptr = strtok(NULL, _delimiters);
+	}
+
+	// put a null terminator at the end
+	*_output = (char **) realloc(*_output, size * sizeof(char*));
+	(*_output)[size-1] = NULL;
+
+	return size-1;
 }
 
 static void Str_init(Str *self) {
@@ -326,6 +347,7 @@ static void Str_init(Str *self) {
     self->has = has;
     self->find = find;
     self->replace = replace;
+    self->split = split;
 }
 
 Str *Str_new() {
