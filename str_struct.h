@@ -20,6 +20,7 @@ typedef struct STR_S {
     bool (*has) (struct STR_S *, const char *);
     int (*find) (struct STR_S *, const char *, int **);
     void (*replace) (struct STR_S *, const char *, const char *);
+    int (*split) (struct STR_S *, char ***, const char *);
 } Str;
 
 Str *Str_new();
