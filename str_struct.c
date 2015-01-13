@@ -317,7 +317,7 @@ static int split(Str *self, char ***_output, const char *_delimiters) {
 
 		*_output = (char **) realloc(*_output, size * sizeof(char*));
 		(*_output)[size-1] = temp;
-    	size++;
+        size++;
 
 		ptr = strtok(NULL, _delimiters);
 	}
